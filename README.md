@@ -1,4 +1,4 @@
-# A Chess Transformer
+# RL Chess Transformers
 
 ## General/Future TODOs
 
