@@ -3,7 +3,9 @@
 ## General/Future TODOs
 
 - Instead of having utilities in colab notebooks, create util.py files
-- Organize Repo so that there is a distinction between the autoregressive and standard approach (or even consider deleting the standard approach)
+- Add Q-Learning folder
+- Add play folder which includes a UI for playing against our models
+
 
 ## Dataset
 
