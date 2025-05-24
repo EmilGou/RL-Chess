@@ -25,11 +25,11 @@ The raw moves and FENs may can be downloaded here: [Moves](https://drive.google.
 
 Results are achieved from testing the model checkpoints on one randomly samples position from 1000 games. The samples are the same across all of the checkpoints. Top-k sampling is used with k = 10. 
 
-![accuracies](GRPO\Assets\legalacc_seed=666_topk=10_v1.png)
+![accuracies](GRPO/Assets/legalacc_seed=666_topk=10_v1.png)
 
 The distribution of mistakes broken down by piece type across various checkpoints:
 
-![mistakes](GRPO\Assets\mistakes_epochs_pieces_topk=10_v1.png)
+![mistakes](GRPO/Assets/mistakes_epochs_pieces_topk=10_v1.png)
 
 ##### Model vs Fairy-Stockfish
 
@@ -41,7 +41,7 @@ Below are the results of the estimated elo differences between the v1 model and 
 - Level 4: 1100
 
 
-![EloDiff](GRPO\Assets\elo_vs_fairystockfish_v1_topk=10_alpha=30.png)
+![EloDiff](GRPO/Assets/elo_vs_fairystockfish_v1_topk=10_alpha=30.png)
 
 Detailed metrics across all levels
 
