@@ -1,4 +1,4 @@
-#Taken from https://github.com/sgrvinod/chess-transformers/blob/main/chess_transformers/data/levels.py
+#Taken from https://github.com/sgrvinod/chess-transformers/blob/main/chess_transformers/data/levels.py and modified
 
 UCI_MOVES = {
     "a1h8": 0,
@@ -1971,3 +1971,31 @@ UCI_MOVES = {
     "h2h1n": 1967,
     "<end>": 1968
 }
+
+
+UCI_IDS = {v: k for k, v in UCI_MOVES.items()}
+
+# accidently ommited white turn but models have already trained so it is too late
+FEN_CHARS = [
+    '/', ' ', '-',                            
+    'P','N','B','R','Q','K',
+    'p','n','b','r','q','k',                   
+    '0','1','2','3','4','5','6','7','8','9',    
+    'a','b','c','d','e','f','g','h'           
+]
+FEN_CHAR_TO_ID = {c: i + len(UCI_MOVES) for i, c in enumerate(FEN_CHARS)}
+ID_TO_FEN_CHAR = {v: k for k, v in FEN_CHAR_TO_ID.items()}
+
+
+max_idx = max(FEN_CHAR_TO_ID.values())
+
+
+SPECIAL_TOKENS = {
+    "<board>":   max_idx + 1,
+    "</board>":  max_idx + 2,
+    "<moves>":   max_idx + 3,
+    "</moves>":  max_idx + 4,
+    "<pad>":     max_idx + 5,
+}
+ID_TO_SPECIAL = {v: k for k, v in SPECIAL_TOKENS.items()}
+

@@ -2,6 +2,7 @@
 import torch
 import numpy as np
 import random
+from .tokenize import untokenize
 
 
 def set_seeds(seed=42):
@@ -42,4 +43,32 @@ def parse_fen(fen_str: str):
   }
 
 
+def extract_fen_from_game(game_ids):
+    '''
+    Takes example of token ids in the format of <board>fen</board><moves> e2e4 - -  </moves> and returns the fen string.
+
+    Args:
+        game_ids (list): List of token ids.
+
+    Returns:
+        str: The FEN string.
+
+    '''
+    game = untokenize(game_ids)
+
+    board_idx = 0
+    for i, token in enumerate(game):
+        if token == '<board>':
+            moves_idx = i
+            break
+    end_board_idx = 0
+    for i, token in enumerate(game):
+        if token == '</board>':
+            end_moves_idx = i
+            break
+    fen_str = ''.join(game[moves_idx+1:end_moves_idx])
+
+    fen_str = fix_fen(fen_str)
+
+    return fen_str
 

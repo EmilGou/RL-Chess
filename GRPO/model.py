@@ -2,7 +2,11 @@ from dataclasses import dataclass
 import torch.nn as nn
 import torch
 from torch.nn import functional as F
+import chess
 import math
+from .vocab import *
+from .tokenize import tokenize_fen
+from .utils import extract_fen_from_game
 
 class AutoregressiveTransformer(nn.Module):
     def __init__(
@@ -56,3 +60,55 @@ class AutoregressiveTransformer(nn.Module):
 
       x = self.transformer(x, mask=attn_mask, src_key_padding_mask=pad_mask)
       return self.lm_head(x)
+    
+    def predict_move(model, seq, seq_tensor,
+                           top_k=10, temperature=1.0, alpha=30,
+                           mask_illegal=True, last_fen=None):
+    
+        device = seq_tensor.device
+        if last_fen is None and mask_illegal:
+            raise ValueError("FEN must be provided if mask_illegal is True")
+
+        board = chess.Board(last_fen) if last_fen else None
+
+
+        if alpha is not None:
+            moves_tok = SPECIAL_TOKENS['<moves>']
+            moves_idx = (seq_tensor == moves_tok).nonzero(as_tuple=False)[0, 1]
+            num_moves = seq_tensor.size(1) - moves_idx - 1
+            if num_moves > alpha:
+                cutoff = seq_tensor.size(1) - 1 - alpha
+                to_replay_ids = seq_tensor[0, moves_idx+1:cutoff+1].cpu().tolist()
+                temp_board = chess.Board(extract_fen_from_game(seq))
+                for tok in to_replay_ids:
+                    temp_board.push_uci(UCI_IDS[tok])
+                new_fen = temp_board.fen()
+                prefix = ([SPECIAL_TOKENS["<board>"]] +
+                        tokenize_fen(new_fen) +
+                        [SPECIAL_TOKENS["</board>"], SPECIAL_TOKENS["<moves>"]])
+                prefix_tensor = torch.tensor(prefix, device=device).unsqueeze(0)
+                seq_tensor = torch.cat([prefix_tensor,
+                                        seq_tensor[:, cutoff+1:]], dim=1)
+                seq[:] = prefix + seq[cutoff+1:]
+
+        x = seq_tensor
+        logits = model(x)[0, -1, :] / temperature
+
+        legal_ids = [UCI_MOVES[mv.uci()] for mv in board.legal_moves
+                    if mv.uci() in UCI_MOVES]
+        if not legal_ids:
+            return "<end>", seq_tensor
+        if mask_illegal:
+            mask = torch.full_like(logits, float('-inf'))
+            mask[legal_ids] = 0.0
+            logits += mask
+
+        if top_k is not None and 0 < top_k < logits.size(0):
+            kth_val = torch.topk(logits, top_k).values[-1]
+            logits = torch.where(logits < kth_val,
+                                logits.new_full((), -float('inf')), logits)
+        probs = F.softmax(logits, dim=-1)
+        token = torch.multinomial(probs, num_samples=1).item()
+
+        return token, seq_tensor
+
