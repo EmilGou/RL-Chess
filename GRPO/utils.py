@@ -2,7 +2,9 @@
 import torch
 import numpy as np
 import random
+import chess
 from .tokenize import untokenize
+from .vocab import SPECIAL_TOKENS, UCI_IDS
 
 
 def set_seeds(seed=42):
@@ -11,6 +13,27 @@ def set_seeds(seed=42):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+
+
+def play_moves_get_final_board(input_ids: list):
+
+    board = chess.board(extract_fen_from_game(input_ids))
+    
+    moves_idx = SPECIAL_TOKENS["<moves>"]
+    end_moves_idx = SPECIAL_TOKENS["</moves>"]
+
+    if end_moves_idx in input_ids:
+        end = input_ids.index(end_moves_idx)
+    else:
+        end = len(input_ids)
+    
+    moves_ids = input_ids[input_ids.index(moves_idx) + 1:end]
+    for move_id in moves_ids:
+        move = UCI_IDS[move_id]
+        board.push_uci(move)
+    
+    return board.fen()
+
 
 
 def fix_fen(fen_str: str, default_side: str = "w") -> str:
@@ -45,7 +68,9 @@ def parse_fen(fen_str: str):
 
 def extract_fen_from_game(game_ids):
     '''
-    Takes example of token ids in the format of <board>fen</board><moves> e2e4 - -  </moves> and returns the fen string.
+    Takes example of token ids in the format of 
+    idx(<board>)idx(fen)idx(</board>)idx(<moves>) idx(e2e4) - - idx(</moves>) 
+    and returns the fen string.
 
     Args:
         game_ids (list): List of token ids.

@@ -48,18 +48,17 @@ class ChessGameDataset(torch.utils.data.Dataset):
                torch.tensor(labels,    dtype=torch.long)
 
 
-
+# TODO test this function
 class RLThinkDataset(torch.utils.data.Dataset):
     def __init__(self, games, max_len=128):
-        self.games    = games
-        self.max_len  = max_len
+        self.games = games
+        self.max_len = max_len
         self.pad_token = SPECIAL_TOKENS["<pad>"]
 
     def __len__(self):
         return len(self.games)
 
     def __getitem__(self, idx):
-
         moves = [m.lower() for m in self.games[idx]]
         cutoff = random.randint(1, len(moves) - 1)
         past = moves[:cutoff]
@@ -67,20 +66,18 @@ class RLThinkDataset(torch.utils.data.Dataset):
         board = chess.Board()
         for m in past:
             board.push_uci(m)
-        fen = board.fen()  
+        fen = board.fen()
 
         fen_tokens = tokenize_fen(fen)
-
-
         input_seq = (
-            [SPECIAL_TOKENS["<board>"]] +
-            fen_tokens +
-            [SPECIAL_TOKENS["</board>"],
-             SPECIAL_TOKENS["<moves>"]] 
+            [SPECIAL_TOKENS["<board>"]]
+            + fen_tokens
+            + [SPECIAL_TOKENS["</board>"], SPECIAL_TOKENS["<moves>"]]
         )
-        
-        # TODO: swap right padding with left padding 
-        input_seq = (input_seq + [self.pad_token] * self.max_seq_len)[:self.max_seq_len]
-    
+
+        if len(input_seq) < self.max_len:
+            input_seq = [self.pad_token] * (self.max_len - len(input_seq)) + input_seq
+        else:
+            input_seq = input_seq[-self.max_len:]
+
         return torch.tensor(input_seq, dtype=torch.long)
-           

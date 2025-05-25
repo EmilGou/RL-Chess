@@ -28,7 +28,7 @@ class AutoregressiveTransformer(nn.Module):
         self.pad_id = config.pad_id
         self.max_len = config.max_len
 
-        self.token_emb = nn.Embedding(config.vocab_size, config.d_model)
+        self.token_emb = nn.Embedding(config.vocab_size, config.d_model, padding_idx = self.pad_id)
         self.pos_emb = nn.Embedding(config.max_len, config.d_model)
         self.n_heads = config.n_heads
 
@@ -72,9 +72,10 @@ class AutoregressiveTransformer(nn.Module):
                      temperature=1.0, 
                      alpha=None,
                      mask_illegal=True,
-                     is_left_padded = False,
                      last_fen=None):
-    
+        """
+        This function looks a bit clunky with the parameters but it helps with speed
+        """
         device = seq_tensor.device
         if last_fen is None and mask_illegal:
             raise ValueError("FEN must be provided if mask_illegal is True")
@@ -108,6 +109,7 @@ class AutoregressiveTransformer(nn.Module):
                     if mv.uci() in UCI_MOVES]
         if not legal_ids:
             return "<end>", seq_tensor
+        
         if mask_illegal:
             mask = torch.full_like(logits, float('-inf'))
             mask[legal_ids] = 0.0
@@ -117,6 +119,8 @@ class AutoregressiveTransformer(nn.Module):
             kth_val = torch.topk(logits, top_k).values[-1]
             logits = torch.where(logits < kth_val,
                                 logits.new_full((), -float('inf')), logits)
+
+
         probs = F.softmax(logits, dim=-1)
         token = torch.multinomial(probs, num_samples=1).item()
 
