@@ -160,12 +160,15 @@ class AutoregressiveTransformer(nn.Module):
                     new_row = torch.cat([prefix_tensor, row[cutoff + 1:]])
                     seq[i] = prefix + seq[i][cutoff + 1:]
                     if new_row.size(0) < row.size(0):
-                        pad = torch.full((row.size(0) - new_row.size(0),),
-                                         SPECIAL_TOKENS['<pad>'],
-                                         device=device,
-                                         dtype=row.dtype)
-                        new_row = torch.cat([new_row, pad])
-                    seq_tensor[i] = new_row[:row.size(0)]
+                        left_pad = torch.full((row.size(0) - new_row.size(0),),
+                                            pad_id,
+                                            device=device,
+                                            dtype=row.dtype)
+                        new_row = torch.cat([left_pad, new_row])    # ← pad on the left
+                    else:
+                        new_row = new_row[-row.size(0):]            # truncate on the left if too long
+                    seq_tensor[i] = new_row
+               
 
         logits = self(seq_tensor)[:, -1, :] / temperature
 
