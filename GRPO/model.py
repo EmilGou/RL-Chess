@@ -8,39 +8,43 @@ from .vocab import *
 from .tokenize import tokenize_fen
 from .utils import extract_fen_from_game
 
-class AutoregressiveTransformer(nn.Module):
-    def __init__(
-        self,
-        vocab_size: int,
-        d_model: int = 512,
-        n_heads: int = 8,
-        num_layers: int = 6,
-        d_ff: int = 2048,
-        max_len: int = 512,
-        dropout: float = 0.1,
-        pad_id: int = 0,
-    ) -> None:
-        super().__init__()
-        self.pad_id = pad_id
-        self.max_len = max_len
 
-        self.token_emb = nn.Embedding(vocab_size, d_model)
-        self.pos_emb = nn.Embedding(max_len, d_model)
-        self.n_heads = n_heads
+@dataclass
+class ChessConfig:
+    vocab_size: int = 2008,
+    d_model: int = 512,
+    n_heads: int = 8,
+    num_layers: int = 6,
+    d_ff: int = 2048,
+    max_len: int = 512,
+    dropout: float = 0.1,
+    pad_id: int = 2008
+
+
+
+class AutoregressiveTransformer(nn.Module):
+    def __init__(self, config: ChessConfig) -> None:
+        super().__init__()
+        self.pad_id = config.pad_id
+        self.max_len = config.max_len
+
+        self.token_emb = nn.Embedding(config.vocab_size, config.d_model)
+        self.pos_emb = nn.Embedding(config.max_len, config.d_model)
+        self.n_heads = config.n_heads
 
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=d_model,
-            nhead=n_heads,
-            dim_feedforward=d_ff,
-            dropout=dropout,
+            d_model=config.d_model,
+            nhead=config.n_heads,
+            dim_feedforward=config.d_ff,
+            dropout=config.dropout,
             batch_first=True,
         )
-        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
+        self.transformer = nn.TransformerEncoder(encoder_layer, config.num_layers)
 
-        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
-
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
         nn.init.normal_(self.pos_emb.weight, mean=0.0, std=0.02)
+
 
 
     def _causal_mask(self, size: int, device: torch.device) -> torch.Tensor:
@@ -60,10 +64,16 @@ class AutoregressiveTransformer(nn.Module):
 
       x = self.transformer(x, mask=attn_mask, src_key_padding_mask=pad_mask)
       return self.lm_head(x)
-    
-    def predict_move(self, seq, seq_tensor,
-                           top_k=10, temperature=1.0, alpha=30,
-                           mask_illegal=True, last_fen=None):
+    # TODO: Test this function and add padding mask
+    def predict_move(self, 
+                     seq, 
+                     seq_tensor,
+                     top_k=10, 
+                     temperature=1.0, 
+                     alpha=None,
+                     mask_illegal=True,
+                     is_left_padded = False,
+                     last_fen=None):
     
         device = seq_tensor.device
         if last_fen is None and mask_illegal:

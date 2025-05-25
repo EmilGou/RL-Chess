@@ -1,4 +1,10 @@
 
+import torch
+import chess
+import random
+from ..vocab import SPECIAL_TOKENS, UCI_IDS
+from ..utils import set_seeds, extract_fen_from_game
+
 def evaluate_legal_move_accuracy(model, val_loader, n_games, seed=None, top_k=None, temperature=1.0):
     """
     Returns
