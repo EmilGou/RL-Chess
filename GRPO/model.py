@@ -127,18 +127,16 @@ class AutoregressiveTransformer(nn.Module):
     #     return token, seq_tensor
 
     def predict_move(self, 
-                     seq, 
-                     seq_tensor,
-                     last_fen,
-                     top_k=10, 
-                     temperature=1.0, 
-                     alpha=None,
-                     mask_illegal=True,
+                     seq: list, 
+                     seq_tensor: torch.tensor,
+                     boards: list, 
+                     top_k: int = 10, 
+                     temperature: int = 1.0, 
+                     alpha : int = None,
+                     mask_illegal: bool = True,
                      ):
 
         device = seq_tensor.device
-
-        boards = [chess.Board(f) if f else None for f in last_fen]
 
         if alpha is not None:
             moves_tok = SPECIAL_TOKENS['<moves>']
@@ -161,7 +159,7 @@ class AutoregressiveTransformer(nn.Module):
                     seq[i] = prefix + seq[i][cutoff + 1:]
                     if new_row.size(0) < row.size(0):
                         left_pad = torch.full((row.size(0) - new_row.size(0),),
-                                            pad_id,
+                                            self.pad_id,
                                             device=device,
                                             dtype=row.dtype)
                         new_row = torch.cat([left_pad, new_row])    # ← pad on the left
