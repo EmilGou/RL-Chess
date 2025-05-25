@@ -61,7 +61,7 @@ class AutoregressiveTransformer(nn.Module):
       x = self.transformer(x, mask=attn_mask, src_key_padding_mask=pad_mask)
       return self.lm_head(x)
     
-    def predict_move(model, seq, seq_tensor,
+    def predict_move(self, seq, seq_tensor,
                            top_k=10, temperature=1.0, alpha=30,
                            mask_illegal=True, last_fen=None):
     
@@ -92,7 +92,7 @@ class AutoregressiveTransformer(nn.Module):
                 seq[:] = prefix + seq[cutoff+1:]
 
         x = seq_tensor
-        logits = model(x)[0, -1, :] / temperature
+        logits = self(x)[0, -1, :] / temperature
 
         legal_ids = [UCI_MOVES[mv.uci()] for mv in board.legal_moves
                     if mv.uci() in UCI_MOVES]
