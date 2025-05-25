@@ -4,7 +4,7 @@ import torch
 from torch.nn import functional as F
 import chess
 import math
-from .vocab import *
+from .vocab import UCI_MOVES, UCI_IDS, SPECIAL_TOKENS
 from .tokenize import tokenize_fen
 from .utils import extract_fen_from_game
 
