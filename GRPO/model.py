@@ -18,7 +18,7 @@ class ChessConfig:
     d_ff: int = 2048
     max_len: int = 512
     dropout: float = 0.1
-    pad_id: int = 2008
+    pad_id: int = 2006
 
 
 
