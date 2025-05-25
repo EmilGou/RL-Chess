@@ -1,7 +1,7 @@
 import torch
 import random
 import chess
-from .vocab import *
+from .vocab import SPECIAL_TOKENS
 from .tokenize import tokenize_fen, tokenize_uci
 
 class ChessGameDataset(torch.utils.data.Dataset):

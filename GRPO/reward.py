@@ -7,11 +7,10 @@ def reward_fn(batch_prompts: list[str],
               batch_completions: list[str],
               limit: int = 3,
               depth: int = 12,
-              UCI_elo: int = 1000) -> list[float]:
+              ) -> list[float]:
 
 
     engine = chess.engine.SimpleEngine.popen_uci(engine_path)
-    engine.configure({})
     rewards = []
 
     for prompt, completion in zip(batch_prompts, batch_completions):
@@ -19,7 +18,7 @@ def reward_fn(batch_prompts: list[str],
         board = chess.Board(fen_txt)
         
 
-        agent = board.turn                        # colour about to play
+        agent = board.turn 
 
         base  = engine.analyse(board, chess.engine.Limit(depth=depth))
         base_eval  = base["score"].pov(agent).score(mate_score=10000)
