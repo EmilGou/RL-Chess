@@ -3,11 +3,12 @@ from .utils import extract_fen_from_game
 
 # TODO: Formulate this reward function to work properly
 def reward_fn(batch_prompts: list[str],
-              engine_path: str,
               batch_completions: list[str],
+              engine_path: str,
               limit: int = 3,
               depth: int = 12,
               ) -> list[float]:
+
 
 
     engine = chess.engine.SimpleEngine.popen_uci(engine_path)
