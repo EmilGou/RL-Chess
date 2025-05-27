@@ -135,7 +135,21 @@ class AutoregressiveTransformer(nn.Module):
                      alpha : int = None,
                      mask_illegal: bool = True,
                      ):
+        """
+        Predict the next move based on the sequence tensor and the current board state.
 
+        Args:
+            seq (list): List of token ids representing the sequence.
+            seq_tensor (torch.Tensor): Tensor representation of the sequence. (B, L)
+            boards (list): List of chess.Board objects corresponding to the sequences.
+            top_k (int, optional): Number of top tokens to consider for sampling. Defaults to 10.
+            temperature (float, optional): Temperature for softmax sampling. Defaults to 1.0.
+            alpha (int, optional): If provided, will truncate the sequence to the last alpha moves.
+            mask_illegal (bool, optional): If True, masks illegal moves in the logits.
+        Returns:
+            tokens (list): List of predicted token ids.
+            new_seq_tensor (torch.Tensor): Updated sequence tensor with the predicted token appended. (B, L+1)
+        """
         device = seq_tensor.device
 
         if alpha is not None:
@@ -178,7 +192,7 @@ class AutoregressiveTransformer(nn.Module):
             legal_ids = [UCI_MOVES[mv.uci()] for mv in board.legal_moves
                          if mv.uci() in UCI_MOVES] if board else []
             if not legal_ids:
-                tokens.append(ID_TO_SPECIAL[self.pad_id])
+                tokens.append(self.pad_id)  # If no legal moves, return pad token
                 continue
             if mask_illegal:
                 mask = torch.full_like(logit_i, float("-inf"))
@@ -192,6 +206,7 @@ class AutoregressiveTransformer(nn.Module):
             probs = F.softmax(logit_i, dim=-1)
             token = torch.multinomial(probs, num_samples=1).item()
             tokens.append(token)
-            new_seq_tensor = torch.cat([new_seq_tensor, torch.tensor(token, device=device).unsqueeze(0)], dim=1)
+        
+        new_seq_tensor = torch.cat([new_seq_tensor, torch.tensor(tokens, device = device).unsqueeze(1)], dim = 1)
 
         return tokens, new_seq_tensor
