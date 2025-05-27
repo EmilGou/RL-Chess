@@ -192,6 +192,6 @@ class AutoregressiveTransformer(nn.Module):
             probs = F.softmax(logit_i, dim=-1)
             token = torch.multinomial(probs, num_samples=1).item()
             tokens.append(token)
-            new_seq_tensor = torch.cat([new_seq_tensor, torch.tensor([[token]], device=device)], dim=1)
+            new_seq_tensor = torch.cat([new_seq_tensor, torch.tensor(token, device=device).unsqueeze(0)], dim=1)
 
         return tokens, new_seq_tensor
