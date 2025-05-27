@@ -4,7 +4,7 @@ import torch
 from torch.nn import functional as F
 import chess
 import math
-from .vocab import UCI_MOVES, UCI_IDS, SPECIAL_TOKENS
+from .vocab import UCI_MOVES, UCI_IDS, SPECIAL_TOKENS, ID_TO_SPECIAL
 from .tokenize import tokenize_fen
 from .utils import extract_fen_from_game
 
@@ -169,7 +169,8 @@ class AutoregressiveTransformer(nn.Module):
                
 
         logits = self(seq_tensor)[:, -1, :] / temperature
-
+        
+        new_seq_tensor = seq_tensor.clone()
         tokens = []
         for i in range(logits.size(0)):
             logit_i = logits[i]
@@ -177,7 +178,7 @@ class AutoregressiveTransformer(nn.Module):
             legal_ids = [UCI_MOVES[mv.uci()] for mv in board.legal_moves
                          if mv.uci() in UCI_MOVES] if board else []
             if not legal_ids:
-                tokens.append("<end>")
+                tokens.append(ID_TO_SPECIAL[self.pad_id])
                 continue
             if mask_illegal:
                 mask = torch.full_like(logit_i, float("-inf"))
@@ -191,5 +192,6 @@ class AutoregressiveTransformer(nn.Module):
             probs = F.softmax(logit_i, dim=-1)
             token = torch.multinomial(probs, num_samples=1).item()
             tokens.append(token)
+            new_seq_tensor = new_seq_tensor.cat([new_seq_tensor, torch.tensor([[token]], device=device)], dim=1)
 
-        return tokens, seq_tensor
+        return tokens, new_seq_tensor
