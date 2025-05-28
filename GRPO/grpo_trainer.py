@@ -223,7 +223,7 @@ class GRPOTrainer:
                 # 4‑a) *policy* move  (mask = 1)
                 move_ids, input_ids = model.predict_move(
                     seqs,
-                    self._pad(seqs, pad_id).to(device),
+                    self._pad(seqs).to(device),
                     boards,
                 )
                 for i, tok in enumerate(move_ids):
@@ -236,7 +236,7 @@ class GRPOTrainer:
                 # 4‑b) *model* response move  (mask = 0)
                 resp_ids, input_ids = model.predict_move(
                     seqs,
-                    self._pad(seqs, pad_id).to(device),
+                    self._pad(seqs).to(device),
                     boards,
                 )
                 for i, tok in enumerate(resp_ids):
@@ -278,7 +278,7 @@ class GRPOTrainer:
             
 
         # 7) pad everything for the backward pass
-        input_ids  = self._pad(seqs, pad_id).to(device)                          # (B·G, T+L)
+        input_ids  = self._pad(seqs).to(device)                          # (B·G, T+L)
         max_L      = max(len(c) for c in completions)
         completion_ids  = torch.full((batch_size, max_L), pad_id,
                                     dtype=torch.long, device=device)
