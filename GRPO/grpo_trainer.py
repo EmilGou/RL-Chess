@@ -106,6 +106,8 @@ class GRPOTrainer:
 
 
     def _compute_loss(self, model, inputs):
+    
+            mode = "train" if self.model.training else "eval"
 
             completion_ids, completion_mask = inputs["completion_ids"], inputs["completion_mask"]
             input_ids = inputs["input_ids"]
@@ -139,6 +141,10 @@ class GRPOTrainer:
             per_token_loss1 = coef_1 * advantages
             per_token_loss2 = coef_2 * advantages
             per_token_loss = -torch.min(per_token_loss1, per_token_loss2)
+
+            # log reward
+            self._metrics[mode].setdefault("reward", []).append(-((per_token_loss * completion_mask).sum(-1) / completion_mask.sum(-1).clamp(min=1.0)).mean())
+
             if self.beta != 0.0:
                 per_token_loss = per_token_loss + self.beta * per_token_kl
 
@@ -151,8 +157,7 @@ class GRPOTrainer:
             else:
                 raise ValueError(f"Unknown loss type: {self.loss_type}")
 
-            # Log the metrics
-            mode = "train" if self.model.training else "eval"
+            
 
             if self.beta != 0.0:
                 mean_kl = (per_token_kl * completion_mask).sum() / completion_mask.sum()
