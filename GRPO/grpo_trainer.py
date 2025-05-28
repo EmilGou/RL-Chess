@@ -6,7 +6,6 @@ from .vocab import UCI_IDS
 
 @dataclass
 class GRPOArgs:
-    temperature: float = 1.0
     epsilon_low: float = 0.2
     epsilon_high: float = 0.2
     temperature: float = 1.0
