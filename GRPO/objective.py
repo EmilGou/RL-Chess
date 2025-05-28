@@ -9,12 +9,73 @@ class GRPOArgs:
     temperature: float = 1.0
     epsilon_low: float = 0.2
     epsilon_high: float = 0.2
+    temperature: float = 1.0
     beta: float = 0.03
     loss_type: str = "grpo"
+    num_generations: int = 4
+    num_moves: int = 10
+    total_steps: int = 10000
+    log_every: int = 5
+    save_every: int = 500
+
+    device: str   = "cuda"
 
 class GRPOTrainer:
-    def __init__(self, model, ref_model, args, accelerator):
-        pass
+    def __init__(self, model, ref_model, args):
+        self.pad_id = model.pad_id
+        self.model = model
+        self.ref_model = ref_model
+        self.temperature = args.temperature
+        self.epsilon_low = args.epsilon_low
+        self.epsilon_high = args.epsilon_high
+        self.beta = args.beta
+        self.loss_type = args.loss_type
+        self._metrics = {"train": {}, "eval": {}}
+        self.optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
+    
+    def step(self, batch):
+        self.model.train()
+
+        loss = self._compute_loss(self.model, batch)   # (scalar tensor)
+        loss.backward()
+        self.optimizer.step()
+        self.optimizer.zero_grad()
+
+        # log
+        loss_val = loss.detach().cpu().item()
+        self._metrics["train"]["loss"].append(loss_val)
+
+        self.global_step += 1
+        if self.global_step % self.args.log_every == 0:
+            print(f"step {self.global_step:>6} | loss {loss_val:8.4f}")
+
+        return loss_val
+    
+    def train(self, dataloader, engine_path):
+        """
+        dataloader yields prompt tensors of shape (B,T) on CPU
+        engine_path path to Stockfish binary for rollouts
+        """
+        while self.global_step < self.args.total_steps:
+            for prompts in dataloader:
+                prompts = prompts.to(self.args.device)
+
+                # rollout → batch dict
+                batch = self._generate_completions_and_score(
+                    self.model,
+                    prompts,
+                    engine_path   = engine_path,
+                    depth         = 12,
+                    num_generations = self.args.num_generations,
+                    num_moves       = self.args.num_moves,
+                    limit           = 2,
+                )
+                self.step(batch)
+
+                if self.global_step >= self.args.total_steps:
+                    break
+
+
         
     def _get_per_token_logps(self, model, input_ids, logits_to_keep, batch_size=None) -> torch.Tensor:
             batch_size = batch_size or input_ids.size(0)  # Chunk inputs into smaller batches to reduce memory peak
