@@ -12,11 +12,11 @@ from .utils import extract_fen_from_game
 @dataclass
 class ChessConfig:
     vocab_size: int = 2008
-    d_model: int = 512
+    d_model: int = 1024
     n_heads: int = 8
-    num_layers: int = 6
-    d_ff: int = 2048
-    max_len: int = 512
+    num_layers: int = 8
+    d_ff: int = 4096
+    max_len: int = 257
     dropout: float = 0.1
     pad_id: int = 2006
 
