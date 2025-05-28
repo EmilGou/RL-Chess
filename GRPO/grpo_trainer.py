@@ -32,7 +32,6 @@ class GRPOTrainer:
         self._metrics = {"train": {}, "eval": {}}
         self.optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
         self.global_step = 0
-    
     def step(self, batch):
         self.model.train()
 
@@ -46,7 +45,7 @@ class GRPOTrainer:
         self._metrics["train"]["loss"].append(loss_val)
 
         self.global_step += 1
-        if self.global_step % self.args.log_every == 0:
+        if self.global_step % self.log_every == 0:
             print(f"step {self.global_step:>6} | loss {loss_val:8.4f}")
 
         return loss_val
@@ -56,9 +55,9 @@ class GRPOTrainer:
         dataloader yields prompt tensors of shape (B,T) on CPU
         engine_path path to Stockfish binary for rollouts
         """
-        while self.global_step < self.args.total_steps:
+        while self.global_step < self.total_steps:
             for prompts in dataloader:
-                prompts = prompts.to(self.args.device)
+                prompts = prompts.to(self.device)
 
                 # rollout → batch dict
                 batch = self._generate_completions_and_score(
@@ -66,13 +65,13 @@ class GRPOTrainer:
                     prompts,
                     engine_path   = engine_path,
                     depth         = 12,
-                    num_generations = self.args.num_generations,
-                    num_moves       = self.args.num_moves,
+                    num_generations = self.num_generations,
+                    num_moves       = self.num_moves,
                     limit           = 2,
                 )
                 self.step(batch)
 
-                if self.global_step >= self.args.total_steps:
+                if self.global_step >= self.total_steps:
                     break
 
 
