@@ -1,5 +1,6 @@
 import torch
 import chess
+import chess.engine
 from dataclasses import dataclass
 from .utils import selective_log_softmax, nanmax, nanmin, extract_fen_from_game
 from .vocab import UCI_IDS
