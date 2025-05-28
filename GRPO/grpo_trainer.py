@@ -17,7 +17,6 @@ class GRPOArgs:
     total_steps: int = 10000
     log_every: int = 5
     save_every: int = 500
-
     device: str   = "cuda"
 
 class GRPOTrainer:
@@ -32,6 +31,7 @@ class GRPOTrainer:
         self.loss_type = args.loss_type
         self._metrics = {"train": {}, "eval": {}}
         self.optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
+        self.global_step = 0
     
     def step(self, batch):
         self.model.train()
