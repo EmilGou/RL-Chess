@@ -19,19 +19,27 @@ class GRPOArgs:
     save_every: int = 500
     device: str   = "cuda"
 
+# TODO: If time, clean up the init a little bit
 class GRPOTrainer:
     def __init__(self, model, ref_model, args):
         self.pad_id = model.pad_id
         self.model = model
         self.ref_model = ref_model
-        self.temperature = args.temperature
         self.epsilon_low = args.epsilon_low
         self.epsilon_high = args.epsilon_high
+        self.temperature = args.temperature
         self.beta = args.beta
         self.loss_type = args.loss_type
+        self.num_generations = args.num_generations
+        self.num_moves = args.num_moves
+        self.total_steps = args.total_steps
+        self.log_every = args.log_every
+        self.save_every = args.save_every
+        self.device = args.device
         self._metrics = {"train": {}, "eval": {}}
         self.optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
         self.global_step = 0
+
     def step(self, batch):
         self.model.train()
 
