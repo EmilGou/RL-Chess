@@ -36,7 +36,7 @@ class GRPOTrainer:
         self.log_every = args.log_every
         self.save_every = args.save_every
         self.device = args.device
-        self._metrics = {"train": {}, "eval": {}}
+        self._metrics = {"train": {"kl": []}, "eval": {"kl": []}}
         self.optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
         self.global_step = 0
 
