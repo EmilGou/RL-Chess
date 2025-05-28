@@ -35,7 +35,7 @@ class GRPOTrainer:
         self.log_every = args.log_every
         self.save_every = args.save_every
         self.device = args.device
-        self._metrics = {"train": {"kl": []}, "eval": {"kl": []}}
+        self._metrics = {"train": {}, "eval": {}}
         self.optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
         self.global_step = 0
 
@@ -49,7 +49,7 @@ class GRPOTrainer:
 
         # log
         loss_val = loss.detach().cpu().item()
-        self._metrics["train"]["loss"].append(loss_val)
+        self._metrics["train"].setdefault("loss", []).append(loss_val)
 
         self.global_step += 1
         if self.global_step % self.log_every == 0:
@@ -145,7 +145,7 @@ class GRPOTrainer:
             elif self.loss_type == "bnpo":
                 loss = (per_token_loss * completion_mask).sum() / completion_mask.sum().clamp(min=1.0)
             elif self.loss_type == "dr_grpo":
-                loss = (per_token_loss * completion_mask).sum() / (per_token_loss.size(0) * self.max_completion_length)
+                loss = (per_token_loss * completion_mask).sum() / (per_token_loss.size(0) * self.num_moves)
             else:
                 raise ValueError(f"Unknown loss type: {self.loss_type}")
 
@@ -154,25 +154,28 @@ class GRPOTrainer:
 
             if self.beta != 0.0:
                 mean_kl = (per_token_kl * completion_mask).sum() / completion_mask.sum()
-                self._metrics[mode]["kl"].append(mean_kl).nanmean().item()
+                self._metrics[mode].setdefault("kl", []).append(mean_kl.nanmean().item())
 
-               # Compute the clipped probability ratios
-            is_low_clipped = (coef_1 < 1 - self.epsilon_low) & (advantages < 0)
-            is_high_clipped = (coef_1 > 1 + self.epsilon_high) & (advantages > 0)
+
+            is_low_clipped    = (coef_1 < 1 - self.epsilon_low)  & (advantages < 0)
+            is_high_clipped   = (coef_1 > 1 + self.epsilon_high) & (advantages > 0)
             is_region_clipped = is_low_clipped | is_high_clipped
 
-            low_clip = (is_low_clipped * completion_mask).sum() / completion_mask.sum()
-            high_clip = (is_high_clipped * completion_mask).sum() / completion_mask.sum()
+            low_clip   = (is_low_clipped    * completion_mask).sum() / completion_mask.sum()
+            high_clip  = (is_high_clipped   * completion_mask).sum() / completion_mask.sum()
             clip_ratio = (is_region_clipped * completion_mask).sum() / completion_mask.sum()
 
-            gathered_low_clip = self.accelerator.gather(low_clip)
-            self._metrics[mode]["clip_ratio/low_mean"].append(gathered_low_clip.nanmean().item())
-            self._metrics[mode]["clip_ratio/low_min"].append(nanmin(gathered_low_clip).item())
-            gathered_high_clip = self.accelerator.gather(high_clip)
-            self._metrics[mode]["clip_ratio/high_mean"].append(gathered_high_clip.nanmean().item())
-            self._metrics[mode]["clip_ratio/high_max"].append(nanmax(gathered_high_clip).item())
-            gathered_clip_ratio = self.accelerator.gather(clip_ratio)
-            self._metrics[mode]["clip_ratio/region_mean"].append(gathered_clip_ratio.nanmean().item())
+            # 3. record metrics ----------------------------------------------------------
+            metrics = self._metrics[mode]  # shorthand
+
+            metrics.setdefault("clip_ratio/low_mean",   []).append(low_clip.nanmean().item())
+            metrics.setdefault("clip_ratio/low_min",    []).append(nanmin(low_clip).item())
+
+            metrics.setdefault("clip_ratio/high_mean",  []).append(high_clip.nanmean().item())
+            metrics.setdefault("clip_ratio/high_max",   []).append(nanmax(high_clip).item())
+
+            metrics.setdefault("clip_ratio/region_mean", []).append(clip_ratio.nanmean().item())
+            
             return loss
 
     def _pad(self, seqs):
