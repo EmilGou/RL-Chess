@@ -17,6 +17,7 @@ class GRPOArgs:
     log_every: int = 5
     save_every: int = 500
     device: str   = "cuda"
+    engine_path: str = "stockfish/stockfish-ubuntu-x86-64-sse41-popcnt"
 
 # TODO: If time, clean up the init a little bit
 class GRPOTrainer:
@@ -38,6 +39,7 @@ class GRPOTrainer:
         self._metrics = {"train": {}, "eval": {}}
         self.optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
         self.global_step = 0
+        self.engine = chess.engine.SimpleEngine.popen_uci(args.engine_path)
 
     def step(self, batch):
         self.model.train()
@@ -74,7 +76,7 @@ class GRPOTrainer:
                     depth         = 12,
                     num_generations = self.num_generations,
                     num_moves       = self.num_moves,
-                    limit           = 2,
+                    limit           = 3,
                 )
                 self.step(batch)
 
@@ -207,80 +209,74 @@ class GRPOTrainer:
         boards = [chess.Board(extract_fen_from_game(s)) for s in seqs]
 
         # 3) Stockfish eval before roll‑outs
-        engine = chess.engine.SimpleEngine.popen_uci(engine_path)
-        with engine:
-            base_eval = torch.tensor(
-                [
-                    engine.analyse(b, chess.engine.Limit(depth=depth))["score"]
-                        .pov(b.turn).score(mate_score=10000)
-                    for b in boards
-                ],
-                dtype=torch.float32, device=device
+
+        base_eval = torch.tensor(
+            [
+                self.engine.analyse(b, chess.engine.Limit(depth=depth))["score"]
+                    .pov(b.turn).score(mate_score=10000)
+                for b in boards
+            ],
+            dtype=torch.float32, device=device
+        )
+
+        # 4) roll‑out:  num_moves × 2 half‑moves
+        completions, completion_masks = [[] for _ in range(batch_size)], [[] for _ in range(batch_size)]
+        pair_rewards = []
+        for _ in range(num_moves):
+            # 4‑a) *policy* move  (mask = 1)
+            move_ids, input_ids = model.predict_move(
+                seqs,
+                self._pad(seqs).to(device),
+                boards,
             )
+            for i, tok in enumerate(move_ids):
+                completions[i].append(tok)
+                completion_masks[i].append(1 if tok != pad_id else 0)
+                if tok != pad_id and not boards[i].is_game_over():
+                    boards[i].push_uci(UCI_IDS[tok])
+                seqs[i].append(tok)
 
-            # 4) roll‑out:  num_moves × 2 half‑moves
-            completions, completion_masks = [[] for _ in range(batch_size)], [[] for _ in range(batch_size)]
-
-            for _ in range(num_moves):
-                # 4‑a) *policy* move  (mask = 1)
-                move_ids, input_ids = model.predict_move(
-                    seqs,
-                    self._pad(seqs).to(device),
-                    boards,
-                )
-                for i, tok in enumerate(move_ids):
-                    completions[i].append(tok)
-                    completion_masks[i].append(1 if tok != pad_id else 0)
-                    if tok != pad_id and not boards[i].is_game_over():
-                        boards[i].push_uci(UCI_IDS[tok])
-                    seqs[i].append(tok)
-
-                # 4‑b) *model* response move  (mask = 0)
-                resp_ids, input_ids = model.predict_move(
-                    seqs,
-                    self._pad(seqs).to(device),
-                    boards,
-                )
-                for i, tok in enumerate(resp_ids):
-                    completions[i].append(tok)
-                    completion_masks[i].append(0)           # never optimised
-                    if tok != pad_id and not boards[i].is_game_over():
-                        boards[i].push_uci(UCI_IDS[tok])
-                    seqs[i].append(tok)
+            # 4‑b) *model* response move  (mask = 0)
+            resp_ids, input_ids = model.predict_move(
+                seqs,
+                self._pad(seqs).to(device),
+                boards,
+            )
+            for i, tok in enumerate(resp_ids):
+                completions[i].append(tok)
+                completion_masks[i].append(0)           # never optimised
+                if tok != pad_id and not boards[i].is_game_over():
+                    boards[i].push_uci(UCI_IDS[tok])
+                seqs[i].append(tok)
 
             # 5) Stockfish eval after roll‑outs
             after_eval = torch.tensor(
                 [
-                    engine.analyse(b, chess.engine.Limit(depth=depth))["score"]
+                    self.engine.analyse(b, chess.engine.Limit(depth=depth))["score"]
                         .pov(b.turn).score(mate_score=10000)
                     for b in boards
                 ],
                 dtype=torch.float32, device=device
             )
+            pair_rewards.append((after_eval - base_eval) / 100.0)
+            base_eval = after_eval  # update for the next round
+
 
         # 6) centred rewards → advantages
-        delta        = (after_eval - base_eval) / 100.0          
-        scaled_reward = torch.clamp(delta, -limit, limit)        
-        # ------------------------------------------------------------------
-    #  ⬇  NEW: per‑token advantages (B·G, L)  --------------------------
-    # ------------------------------------------------------------------
-        rewards   = scaled_reward.view(B, num_generations)          # (B, G) as before
-        centered  = rewards - rewards.mean(dim=1, keepdim=True)     # baseline
 
-        # Expand to (B·G, L) by repeating each reward over its two half‑moves
-        # (first is policy, second is response) …
-        expanded = centered.repeat_interleave(num_moves * 2, dim=1)   # (B, G*L)
-        expanded = expanded.view(-1, num_moves * 2)                    # (B·G, L)
+        delta   = torch.stack(pair_rewards, dim=1)                 # (B·G, M)
+        delta   = torch.clamp(delta, -limit, limit)
 
-        # Cumulative future return per token (process supervision)
-        gammas = torch.pow(0.95, torch.arange(num_moves*2, device=device))
-        advantages = torch.flip(torch.cumsum(torch.flip(expanded, [1]), dim=1), [1]) / gammas 
+        rewards   = delta.view(B, num_generations, num_moves)      # (B, G, M)
+        centered  = rewards - rewards.mean(dim=1, keepdim=True)    # baseline
 
+        expanded  = centered.reshape(B*num_generations, num_moves) # (B·G, M)
+        expanded  = expanded.repeat_interleave(2, dim=1)           # (B·G, M*2)
+        expanded[:, 1::2] = 0                                       # mask replies
 
-            
-
+        
         # 7) pad everything for the backward pass
-        input_ids  = self._pad(seqs).to(device)                          # (B·G, T+L)
+        input_ids  = self._pad(seqs).to(device)                        
         max_L      = max(len(c) for c in completions)
         completion_ids  = torch.full((batch_size, max_L), pad_id,
                                     dtype=torch.long, device=device)
@@ -292,13 +288,15 @@ class GRPOTrainer:
             completion_ids[i, :L]  = torch.tensor(c, dtype=torch.long, device=device)
             completion_mask[i, :L] = torch.tensor(m, dtype=torch.float32, device=device)
 
-        advantages = advantages * completion_mask                     # (B·G, L)
+        advantages = torch.flip(torch.cumsum(torch.flip(expanded, [1]), dim=1), [1])
 
+        # … build completion_ids / completion_mask as before …
+        advantages *= completion_mask
 
         return {
-            "input_ids"       : input_ids,        # (B·G, T+L)
-            "completion_ids"  : completion_ids,   # (B·G, L)
-            "completion_mask" : completion_mask,  # (B·G, L)
-            "advantages"      : advantages,       # (B·G,)
+            "input_ids"       : input_ids,       
+            "completion_ids"  : completion_ids,   
+            "completion_mask" : completion_mask,  
+            "advantages"      : advantages,       
         }
             
