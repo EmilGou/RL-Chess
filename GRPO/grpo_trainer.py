@@ -155,7 +155,7 @@ class GRPOTrainer:
 
             if self.beta != 0.0:
                 mean_kl = (per_token_kl * completion_mask).sum() / completion_mask.sum()
-                self._metrics[mode]["kl"].append(self.accelerator.gather_for_metrics(mean_kl).nanmean().item())
+                self._metrics[mode]["kl"].append(mean_kl).nanmean().item()
 
                # Compute the clipped probability ratios
             is_low_clipped = (coef_1 < 1 - self.epsilon_low) & (advantages < 0)
