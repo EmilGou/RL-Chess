@@ -214,11 +214,11 @@ def model_vs_engine(model,
     seq_tensor = torch.tensor(seq, device=device).unsqueeze(0)
 
     board = chess.Board(fen)
-
+    # TODO: FIX THIS GOOFINESS
     if engine_type == "stockfihs":
         engine = chess.engine.SimpleEngine.popen_uci("/content/stockfish-ubuntu-x86-64-sse41-popcnt")
     elif engine_type == "fairy":
-        engine = chess.engine.SimpleEngine.popen_uci("/content/fairy-stockfish-largeboard_x86-64")
+        engine = chess.engine.SimpleEngine.popen_uci("/content/RL-Chess-Transformers/fairy-stockfish-largeboard_x86-64")
     else:
         raise ValueError(f"Unknown engine type: {engine_type}")
 
