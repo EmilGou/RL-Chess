@@ -274,7 +274,7 @@ class GRPOTrainer:
                 ],
                 dtype=torch.float32, device=device
             )
-            pair_rewards.append(1/(1 + 10^(-(after_eval - base_eval)/4)))
+            pair_rewards.append(1/(1 + 10**(-(after_eval - base_eval)/4)))
             base_eval = after_eval  # update for the next round
 
 
@@ -304,6 +304,7 @@ class GRPOTrainer:
             completion_ids[i, :L]  = torch.tensor(c, dtype=torch.long, device=device)
             completion_mask[i, :L] = torch.tensor(m, dtype=torch.float32, device=device)
 
+        
         advantages = torch.flip(torch.cumsum(torch.flip(expanded, [1]), dim=1), [1])
 
         # … build completion_ids / completion_mask as before …
