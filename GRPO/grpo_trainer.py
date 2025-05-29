@@ -274,7 +274,7 @@ class GRPOTrainer:
                 ],
                 dtype=torch.float32, device=device
             )
-            pair_rewards.append((after_eval - base_eval) / 100.0)
+            pair_rewards.append(1/(1 + 10^(-(after_eval - base_eval)/4)))
             base_eval = after_eval  # update for the next round
 
 
