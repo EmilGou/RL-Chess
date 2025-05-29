@@ -42,6 +42,8 @@ class GRPOTrainer:
         self.global_step = 0
         self.engine = chess.engine.SimpleEngine.popen_uci(args.engine_path)
 
+        self.ref_model.eval()  # set reference model to eval mode
+
     def step(self, batch):
 
         loss = self._compute_loss(self.model, batch)   # (scalar tensor)
@@ -64,6 +66,7 @@ class GRPOTrainer:
         dataloader yields prompt tensors of shape (B,T) on CPU
         engine_path path to Stockfish binary for rollouts
         """
+        self.model.train()  # set model to train mode
         while self.global_step < self.total_steps:
             for prompts in dataloader:
                 prompts = prompts.to(self.device)
