@@ -46,7 +46,7 @@ class GRPOTrainer:
 
     def step(self, batch):
 
-        loss = self._compute_loss(self.model, batch)   # (scalar tensor)
+        loss = self._compute_loss(batch)   # (scalar tensor)
         loss.backward()
         self.optimizer.step()
         self.optimizer.zero_grad()
@@ -89,7 +89,7 @@ class GRPOTrainer:
         
     def _get_per_token_logps(self, model, input_ids, logits_to_keep, batch_size=None) -> torch.Tensor:
             was_training = model.training
-            model.eval()  # set model to eval mode
+            model.train()  # set model to eval mode
             batch_size = batch_size or input_ids.size(0)  # Chunk inputs into smaller batches to reduce memory peak
             all_logps = []
             for i in range(0, input_ids.size(0), batch_size):
@@ -208,8 +208,8 @@ class GRPOTrainer:
         limit = 2
     ):
         was_training = self.model.training
-        self.model.eval()
-        self.ref_model.eval()
+        self.model.train()
+        self.ref_model.train() # This is just stupid
         device, pad_id = prompt_ids.device, self.model.pad_id
 
         # 1) repeat prompts: (B, T) → (B·G, T)
