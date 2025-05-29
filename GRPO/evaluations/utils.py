@@ -2,6 +2,8 @@
 import torch
 import chess
 import chess.engine
+import chess.pgn
+import chess.svg
 import cairosvg
 import json
 import imageio.v2 as imageio
