@@ -43,7 +43,7 @@ class GRPOTrainer:
         self.engine = chess.engine.SimpleEngine.popen_uci(args.engine_path)
 
     def step(self, batch):
-        self.model.train()
+     
 
         loss = self._compute_loss(self.model, batch)   # (scalar tensor)
         loss.backward()
@@ -68,7 +68,8 @@ class GRPOTrainer:
         while self.global_step < self.total_steps:
             for prompts in dataloader:
                 prompts = prompts.to(self.device)
-
+                self.model.train()
+                self.ref_model.eval()
                 # rollout → batch dict
                 batch = self._generate_completions_and_score(
                     prompts,
@@ -106,7 +107,7 @@ class GRPOTrainer:
 
 
     def _compute_loss(self, model, inputs):
-    
+
             mode = "train" if self.model.training else "eval"
 
             completion_ids, completion_mask = inputs["completion_ids"], inputs["completion_mask"]
@@ -201,6 +202,8 @@ class GRPOTrainer:
         num_moves       = 10,
         limit = 2
     ):
+        self.model.eval()
+        self.ref_model.eval()
         device, pad_id = prompt_ids.device, self.model.pad_id
 
         # 1) repeat prompts: (B, T) → (B·G, T)
