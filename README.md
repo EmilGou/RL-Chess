@@ -5,6 +5,7 @@
 - Instead of having utilities in colab notebooks, create util.py files
 - Add Q-Learning folder
 - Add play folder which includes a UI for playing against our models
+- Add a setup section explaining how to replicate results in colab
 
 
 ## Dataset
