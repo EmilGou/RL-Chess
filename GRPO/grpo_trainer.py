@@ -71,7 +71,6 @@ class GRPOTrainer:
 
                 # rollout → batch dict
                 batch = self._generate_completions_and_score(
-                    self.model,
                     prompts,
                     engine_path   = engine_path,
                     depth         = 12,
@@ -195,15 +194,14 @@ class GRPOTrainer:
 
     def _generate_completions_and_score(
         self,
-        model,
         prompt_ids,                  # (B, T)
         engine_path,
-        depth           = 12,        # for Stockfish analyse
+        depth           = 10,        # for Stockfish analyse
         num_generations = 4,
         num_moves       = 10,
         limit = 2
     ):
-        device, pad_id = prompt_ids.device, model.pad_id
+        device, pad_id = prompt_ids.device, self.model.pad_id
 
         # 1) repeat prompts: (B, T) → (B·G, T)
         B, T       = prompt_ids.shape
@@ -225,12 +223,15 @@ class GRPOTrainer:
             dtype=torch.float32, device=device
         )
 
+        # establish model color
+        turns = [b.turn for b in boards]
+
         # 4) roll‑out:  num_moves × 2 half‑moves
         completions, completion_masks = [[] for _ in range(batch_size)], [[] for _ in range(batch_size)]
         pair_rewards = []
         for _ in range(num_moves):
             # 4‑a) *policy* move  (mask = 1)
-            move_ids, input_ids = model.predict_move(
+            move_ids, input_ids = self.model.predict_move(
                 seqs,
                 self._pad(seqs).to(device),
                 boards,
@@ -243,7 +244,7 @@ class GRPOTrainer:
                 seqs[i].append(tok)
 
             # 4‑b) *model* response move  (mask = 0)
-            resp_ids, input_ids = model.predict_move(
+            resp_ids, input_ids = self.ref_model.predict_move(
                 seqs,
                 self._pad(seqs).to(device),
                 boards,
@@ -259,8 +260,8 @@ class GRPOTrainer:
             after_eval = torch.tensor(
                 [
                     self.engine.analyse(b, chess.engine.Limit(depth=depth))["score"]
-                        .pov(b.turn).score(mate_score=10000)
-                    for b in boards
+                        .pov(turns[i]).score(mate_score=10000)
+                    for i, b in enumerate(boards)
                 ],
                 dtype=torch.float32, device=device
             )
