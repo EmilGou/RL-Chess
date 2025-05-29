@@ -43,7 +43,6 @@ class GRPOTrainer:
         self.engine = chess.engine.SimpleEngine.popen_uci(args.engine_path)
 
     def step(self, batch):
-     
 
         loss = self._compute_loss(self.model, batch)   # (scalar tensor)
         loss.backward()
@@ -68,9 +67,8 @@ class GRPOTrainer:
         while self.global_step < self.total_steps:
             for prompts in dataloader:
                 prompts = prompts.to(self.device)
-                self.model.train()
-                self.ref_model.eval()
                 # rollout → batch dict
+                
                 batch = self._generate_completions_and_score(
                     prompts,
                     engine_path   = engine_path,
@@ -87,6 +85,8 @@ class GRPOTrainer:
 
         
     def _get_per_token_logps(self, model, input_ids, logits_to_keep, batch_size=None) -> torch.Tensor:
+            was_training = model.training
+            model.eval()  # set model to eval mode
             batch_size = batch_size or input_ids.size(0)  # Chunk inputs into smaller batches to reduce memory peak
             all_logps = []
             for i in range(0, input_ids.size(0), batch_size):
@@ -103,10 +103,11 @@ class GRPOTrainer:
                 logits = logits / self.temperature
                 logps = selective_log_softmax(logits, input_ids_batch)  # compute logprobs for the input tokens
                 all_logps.append(logps)
+            model.train(was_training)
             return torch.cat(all_logps, dim=0)
 
 
-    def _compute_loss(self, model, inputs):
+    def _compute_loss(self, inputs):
 
             mode = "train" if self.model.training else "eval"
 
@@ -115,7 +116,7 @@ class GRPOTrainer:
         
             logits_to_keep = completion_ids.size(1)  # we only need to compute the logits for the completion tokens
 
-            per_token_logps = self._get_per_token_logps(model, input_ids, logits_to_keep)
+            per_token_logps = self._get_per_token_logps(self.model, input_ids, logits_to_keep)
 
             # Compute the KL divergence between the model and the reference model
             if self.beta != 0.0:
@@ -193,6 +194,7 @@ class GRPOTrainer:
             dtype=torch.long,
         )
 
+    @torch.no_grad()
     def _generate_completions_and_score(
         self,
         prompt_ids,                  # (B, T)
@@ -202,6 +204,7 @@ class GRPOTrainer:
         num_moves       = 10,
         limit = 2
     ):
+        was_training = self.model.training
         self.model.eval()
         self.ref_model.eval()
         device, pad_id = prompt_ids.device, self.model.pad_id
@@ -302,6 +305,8 @@ class GRPOTrainer:
 
         # … build completion_ids / completion_mask as before …
         advantages *= completion_mask
+
+        self.model.train(was_training)  # set model back to train mode
 
         return {
             "input_ids"       : input_ids,       
