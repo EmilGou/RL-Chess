@@ -10,7 +10,7 @@ class GRPOArgs:
     epsilon_low: float = 0.2
     epsilon_high: float = 0.2
     temperature: float = 1.0
-    beta: float = 0.03
+    beta: float = 0.0
     loss_type: str = "grpo"
     num_generations: int = 4
     num_moves: int = 10
