@@ -223,14 +223,7 @@ class GRPOTrainer:
 
         # 3) Stockfish eval before roll‑outs
 
-        base_eval = torch.tensor(
-            [
-                self.engine.analyse(b, chess.engine.Limit(depth=depth))["score"]
-                    .pov(b.turn).score(mate_score=10000)
-                for b in boards
-            ],
-            dtype=torch.float32, device=device
-        )
+        
 
         # establish model color
         turns = [b.turn for b in boards]
@@ -253,7 +246,7 @@ class GRPOTrainer:
                 seqs[i].append(tok)
 
             # 5) Stockfish eval after roll‑outs
-            after_eval = torch.tensor(
+            eval = torch.tensor(
                 [
                     self.engine.analyse(b, chess.engine.Limit(depth=depth))["score"]
                         .pov(turns[i]).score(mate_score=10000)
@@ -276,8 +269,7 @@ class GRPOTrainer:
                 seqs[i].append(tok)
 
             
-            pair_rewards.append(1/(1 + 10**(-(after_eval - base_eval)/4)))
-            base_eval = after_eval  # update for the next round
+            pair_rewards.append(1/(1 + 10**(-(eval)/4)))
 
 
         # 6) centred rewards → advantages
