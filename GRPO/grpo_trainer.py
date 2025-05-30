@@ -252,6 +252,16 @@ class GRPOTrainer:
                     boards[i].push_uci(UCI_IDS[tok])
                 seqs[i].append(tok)
 
+            # 5) Stockfish eval after roll‑outs
+            after_eval = torch.tensor(
+                [
+                    self.engine.analyse(b, chess.engine.Limit(depth=depth))["score"]
+                        .pov(turns[i]).score(mate_score=10000)
+                    for i, b in enumerate(boards)
+                ],
+                dtype=torch.float32, device=device
+            )
+
             # 4‑b) *model* response move  (mask = 0)
             resp_ids, input_ids = self.ref_model.predict_move(
                 seqs,
@@ -265,15 +275,7 @@ class GRPOTrainer:
                     boards[i].push_uci(UCI_IDS[tok])
                 seqs[i].append(tok)
 
-            # 5) Stockfish eval after roll‑outs
-            after_eval = torch.tensor(
-                [
-                    self.engine.analyse(b, chess.engine.Limit(depth=depth))["score"]
-                        .pov(turns[i]).score(mate_score=10000)
-                    for i, b in enumerate(boards)
-                ],
-                dtype=torch.float32, device=device
-            )
+            
             pair_rewards.append(1/(1 + 10**(-(after_eval - base_eval)/4)))
             base_eval = after_eval  # update for the next round
 
