@@ -1,6 +1,6 @@
 # Links to Checkpoints
-* Pretrained Transformer Models
-* GRPO Models
+* [Pretrained Transformer Models](https://drive.google.com/drive/folders/1Q9_8c8aKzA7RSKBwWmFRKjUNH-K0pIeZ?usp=drive_link)
+* [GRPO Models](https://drive.google.com/drive/folders/1Q9_8c8aKzA7RSKBwWmFRKjUNH-K0pIeZ?usp=drive_link)
 * [Deep Q-Network Models](https://drive.google.com/drive/folders/1m-MbAfuMpOzOWjUOt5dFdorY9qrQbv_1?usp=sharing)
 
 ## Pretrained Transformer Models
