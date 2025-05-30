@@ -64,8 +64,6 @@ A classic chess game implemented in Python using Pygame, where you can play agai
 
 ## Game Snapshots
 
-(Your existing snapshots section can remain here)
-
 ## Snapshot 1 - Start (green)
 ![snapshot1](snapshots/snapshot1.png)
 
