@@ -29,9 +29,6 @@ Results are achieved from testing the model checkpoints on one randomly samples 
 
 ![accuracies](GRPO/Assets/legalacc_seed=666_topk=10_v1.png)
 
-The distribution of mistakes broken down by piece type across various checkpoints:
-
-![mistakes](GRPO/Assets/mistakes_epochs_pieces_topk=10_v1.png)
 
 ##### Model vs Fairy-Stockfish
 
