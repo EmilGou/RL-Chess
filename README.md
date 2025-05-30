@@ -19,12 +19,6 @@ The raw moves and FENs may can be downloaded here: [Moves](https://drive.google.
 
 ## GRPO
 
-The basic gist is we start with random board states from our dataset <board> fen </board> <moves> and have the model play against itself. However, we only consider the starting color given by the fen to be the color of our policy and the other to be the environment responding. For example, if we have: <board> fen </board> <moves> m1 m2 m3 m4 only m1 and m3 are considered to be policy moves. The reason for this is because I thought optimizing the win on both sides would not yield a strrong enough signal so if we optimize to win on one side, the model could make the opponent simply play bad to arbritrarily increase the objective. In this example, there would be two rewards in the form of r = after_eval - base_eval. The current board state is measured for the base_eval, and for every base_eval two moves are played to get the after_eval: the policy move and then the response move from the opponent. Techincally there would be four rewards, but two of them would be masked to be zero. 
-
-FOr every sequence there are multiple rewards so these is process supervision GRPO as opposed to outcome supervision. The Advantage is calculated by taking the cumulative sum of future rewards.
-
-Right now this does not work. It could be because the concept is wrong, the training setup is incorrect, or the code has errors. The code is taken from the source code of the GRPO trainer and modified, and verified with chatty so I don't think that is it. The training seems to be wrong because we get huge spikes in the loss for certain batches, and the actual objective excluding the kl-term does not seem to be non-decreasing. 
-
 ### Pretrained Model
 
 #### Evaluations
