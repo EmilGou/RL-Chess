@@ -1,4 +1,4 @@
-from uci_moves import UCI_MOVES
+from GRPO.vocab import UCI_MOVES
 import math
 import torch
 import chess
