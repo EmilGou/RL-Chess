@@ -289,7 +289,7 @@ class GRPOTrainer:
                 seqs[i].append(UCI_MOVES[move])
 
             
-            pair_rewards.append(1.5/(1 + 10**(-1.5(after_eval - base_eval)/4)))
+            pair_rewards.append(1/(1 + 10**(-1.5*(after_eval - base_eval)/4)))
             
             base_eval = after_eval  # update base eval for the next move
 
