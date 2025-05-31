@@ -18,7 +18,7 @@ class GRPOArgs:
     print_every: int = 5
     save_every: int = 100
     eval_engine_path: str = "stockfish/stockfish-ubuntu-x86-64-sse41-popcnt"
-    play_engine_path: str = "fairy-stockfish-largeboard_x86-64"
+    play_engine_path: str = "/content/RL-Chess-Transformers/fairy-stockfish-largeboard_x86-64"
     logs_dir_path: str = "../drive/MyDrive/A_Chess_Transformer/grpo_checkpoints/" # Little scuffed, but works for now
 
 # TODO: If time, clean up the init a little bit
