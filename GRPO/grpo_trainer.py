@@ -327,4 +327,14 @@ class GRPOTrainer:
             'global_step': self.global_step,
         }, path)
         print(f"Model saved to {path}")
-            
+    
+    def load(self, path):
+        """
+        Load the model and optimizer state from the specified path.
+        """
+        checkpoint = torch.load(path, map_location=self.device)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        self._metrics = checkpoint['metrics']
+        self.global_step = checkpoint['global_step']
+        print(f"Model loaded from {path}")
