@@ -13,7 +13,7 @@ class GRPOArgs:
     beta: float = 0.0
     loss_type: str = "grpo"
     num_generations: int = 3
-    num_moves: int = 20
+    num_moves: int = 30
     total_steps: int = 10000
     print_every: int = 5
     save_every: int = 100
@@ -42,6 +42,7 @@ class GRPOTrainer:
         self.global_step = 0
         self.engine = chess.engine.SimpleEngine.popen_uci(args.eval_engine_path)
         self.play_engine = chess.engine.SimpleEngine.popen_uci(args.play_engine_path)
+        self.device = model.device
 
         ### manually hardcoded for now, but can be changed later
 
