@@ -329,6 +329,10 @@ def evaluate_model_vs_engine(model,
                         *sample_args,
                         **sample_kwargs):
 
+    if model.training:
+        print("Warning: Model is in training mode. Switching to eval mode.")
+    model.eval()
+
     os.makedirs(evals_path + f'model_eval_vids', exist_ok=True)
     results_across_elo = {tier: None for tier in engine_config_dict}
     for tier, config in engine_config_dict.items():

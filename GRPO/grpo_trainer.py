@@ -16,7 +16,7 @@ class GRPOArgs:
     num_moves: int = 10
     total_steps: int = 10000
     log_every: int = 5
-    save_every: int = 500
+    save_every: int = 100
     device: str   = "cuda"
     engine_path: str = "stockfish/stockfish-ubuntu-x86-64-sse41-popcnt"
 
@@ -58,6 +58,9 @@ class GRPOTrainer:
         self.global_step += 1
         if self.global_step % self.log_every == 0:
             print(f"step {self.global_step:>6} | loss {loss_val:8.4f}")
+        
+        if self.global_step % self.save_every == 0:
+            self.save(f"checkpoint_{self.global_step}.pt")
 
         return loss_val
     
@@ -312,4 +315,17 @@ class GRPOTrainer:
             "completion_mask" : completion_mask,  
             "advantages"      : advantages,       
         }
+    
+    def save(self, path):
+        """
+        Save the model and optimizer state to the specified path.
+        """
+        torch.save({
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'metrics': self._metrics,
+            'global_step': self.global_step,
+            'args': self.args,
+        }, path)
+        print(f"Model saved to {path}")
             
