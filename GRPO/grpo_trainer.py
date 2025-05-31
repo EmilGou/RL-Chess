@@ -40,7 +40,7 @@ class GRPOTrainer:
         self._metrics = {"train": {}, "eval": {}}
         self.optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
         self.global_step = 0
-        self.engine = chess.engine.SimpleEngine.popen_uci(args.engine_path)
+        self.engine = chess.engine.SimpleEngine.popen_uci(args.eval_engine_path)
         self.play_engine = chess.engine.SimpleEngine.popen_uci(args.play_engine_path)
 
         ### manually hardcoded for now, but can be changed later
