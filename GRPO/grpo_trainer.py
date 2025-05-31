@@ -325,7 +325,6 @@ class GRPOTrainer:
             'optimizer_state_dict': self.optimizer.state_dict(),
             'metrics': self._metrics,
             'global_step': self.global_step,
-            'args': self.args,
         }, path)
         print(f"Model saved to {path}")
             
