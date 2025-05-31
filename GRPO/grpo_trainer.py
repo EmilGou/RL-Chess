@@ -73,7 +73,7 @@ class GRPOTrainer:
 
         return loss_val
     
-    def train(self, dataloader, engine_path):
+    def train(self, dataloader):
         """
         dataloader yields prompt tensors of shape (B,T) on CPU
         engine_path path to Stockfish binary for rollouts
@@ -86,7 +86,6 @@ class GRPOTrainer:
                 
                 batch = self._generate_completions_and_score(
                     prompts,
-                    engine_path   = engine_path,
                     depth         = 12,
                     num_generations = self.num_generations,
                     num_moves       = self.num_moves,
