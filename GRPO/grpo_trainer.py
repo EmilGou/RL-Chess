@@ -211,7 +211,7 @@ class GRPOTrainer:
     ):
         was_training = self.model.training
         self.model.eval()
-        self.ref_model.eval() # This is just stupid
+        self.ref_model.eval()
         device, pad_id = prompt_ids.device, self.model.pad_id
 
         # 1) repeat prompts: (B, T) → (B·G, T)
@@ -229,6 +229,15 @@ class GRPOTrainer:
 
         # establish model color
         turns = [b.turn for b in boards]
+
+        base_eval = torch.tensor(
+                [
+                    self.engine.analyse(b, chess.engine.Limit(depth=depth))["score"]
+                        .pov(turns[i]).score(mate_score=10000)
+                    for i, b in enumerate(boards)
+                ],
+                dtype=torch.float32, device=device
+            )
 
         # 4) roll‑out:  num_moves × 2 half‑moves
         completions, completion_masks = [[] for _ in range(batch_size)], [[] for _ in range(batch_size)]
@@ -248,7 +257,7 @@ class GRPOTrainer:
                 seqs[i].append(tok)
 
             # 5) Stockfish eval after roll‑outs
-            eval = torch.tensor(
+            after_eval = torch.tensor(
                 [
                     self.engine.analyse(b, chess.engine.Limit(depth=depth))["score"]
                         .pov(turns[i]).score(mate_score=10000)
@@ -256,6 +265,8 @@ class GRPOTrainer:
                 ],
                 dtype=torch.float32, device=device
             )
+
+            
 
             # 4‑b) *model* response move  (mask = 0)
             resp_ids, input_ids = self.ref_model.predict_move(
@@ -271,8 +282,9 @@ class GRPOTrainer:
                 seqs[i].append(tok)
 
             
-            pair_rewards.append(1/(1 + 10**(-(eval)/4)))
-
+            pair_rewards.append(1.5/(1 + 10**(-1.5(after_eval - base_eval)/4)))
+            
+            base_eval = after_eval  # update base eval for the next move
 
         # 6) centred rewards → advantages
 
