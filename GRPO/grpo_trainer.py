@@ -45,8 +45,8 @@ class GRPOTrainer:
         self.ref_model.eval()  # set reference model to eval mode
 
     def step(self, batch):
-        with torch.cuda.amp.autocast(dtype=torch.bfloat16):     # or torch.float16
-            loss = self._compute_loss(batch)
+    
+        loss = self._compute_loss(batch)
         loss.backward()
         self.optimizer.step()
         self.optimizer.zero_grad()
@@ -92,7 +92,7 @@ class GRPOTrainer:
         
     def _get_per_token_logps(self, model, input_ids, logits_to_keep, batch_size=None) -> torch.Tensor:
             was_training = model.training
-            model.train()  # set model to eval mode
+            model.train() 
             batch_size = batch_size or input_ids.size(0)  # Chunk inputs into smaller batches to reduce memory peak
             all_logps = []
             for i in range(0, input_ids.size(0), batch_size):
