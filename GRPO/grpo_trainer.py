@@ -3,7 +3,7 @@ import chess
 import chess.engine
 from dataclasses import dataclass
 from .utils import selective_log_softmax, nanmax, nanmin, extract_fen_from_game
-from .vocab import UCI_IDS
+from .vocab import UCI_IDS, UCI_MOVES
 
 @dataclass
 class GRPOArgs:
@@ -35,7 +35,7 @@ class GRPOTrainer:
         self.num_generations = args.num_generations
         self.num_moves = args.num_moves
         self.total_steps = args.total_steps
-        self.log_every = args.log_every
+        self.print_every = args.print_every
         self.save_every = args.save_every
         self._metrics = {"train": {}, "eval": {}}
         self.optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
@@ -61,7 +61,7 @@ class GRPOTrainer:
             print(f"step {self.global_step:>6} | loss {loss_val:8.4f}")
         
         if self.global_step % self.save_every == 0:
-            self.save(f"checkpoint_{self.global_step}.pt")
+            self.save(f"{self.logs_dir_path}" + f"checkpoint_{self.global_step}.pt")
 
         return loss_val
     
@@ -269,18 +269,24 @@ class GRPOTrainer:
 
             
 
-            # 4‑b) *model* response move  (mask = 0)
-            resp_ids, input_ids = self.ref_model.predict_move(
-                seqs,
-                self._pad(seqs).to(device),
-                boards,
-            )
-            for i, tok in enumerate(resp_ids):
-                completions[i].append(tok)
+            # 4‑b)  response move  (mask = 0)
+            
+            for i, b in enumerate(boards):
+                if b.is_game_over():
+                    move = self.pad_id
+                    completions[i].append(move)
+                    completion_masks[i].append(0)
+                    seqs[i].append(move)
+                    continue
+
+                else:
+                    move = self.play_engine.play(b, chess.engine.Limit(depth=depth, time=.150)).move.uci()
+
+                completions[i].append(UCI_MOVES[move])
                 completion_masks[i].append(0)           # never optimised
-                if tok != pad_id and not boards[i].is_game_over():
-                    boards[i].push_uci(UCI_IDS[tok])
-                seqs[i].append(tok)
+                
+                boards[i].push_uci(move)
+                seqs[i].append(UCI_MOVES[move])
 
             
             pair_rewards.append(1.5/(1 + 10**(-1.5(after_eval - base_eval)/4)))
