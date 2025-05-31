@@ -12,8 +12,8 @@ class GRPOArgs:
     temperature: float = 1.0
     beta: float = 0.0
     loss_type: str = "grpo"
-    num_generations: int = 4
-    num_moves: int = 10
+    num_generations: int = 3
+    num_moves: int = 20
     total_steps: int = 10000
     print_every: int = 5
     save_every: int = 100
