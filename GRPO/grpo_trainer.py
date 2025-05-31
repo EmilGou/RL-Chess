@@ -92,7 +92,7 @@ class GRPOTrainer:
         
     def _get_per_token_logps(self, model, input_ids, logits_to_keep, batch_size=None) -> torch.Tensor:
             was_training = model.training
-            model.train() 
+            model.eval() 
             batch_size = batch_size or input_ids.size(0)  # Chunk inputs into smaller batches to reduce memory peak
             all_logps = []
             for i in range(0, input_ids.size(0), batch_size):
@@ -200,7 +200,6 @@ class GRPOTrainer:
             dtype=torch.long,
         )
 
-    @torch.no_grad()
     def _generate_completions_and_score(
         self,
         prompt_ids,                  # (B, T)
@@ -211,8 +210,8 @@ class GRPOTrainer:
         limit = 2
     ):
         was_training = self.model.training
-        self.model.train()
-        self.ref_model.train() # This is just stupid
+        self.model.eval()
+        self.ref_model.eval() # This is just stupid
         device, pad_id = prompt_ids.device, self.model.pad_id
 
         # 1) repeat prompts: (B, T) → (B·G, T)
