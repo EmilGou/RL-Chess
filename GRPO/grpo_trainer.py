@@ -15,10 +15,11 @@ class GRPOArgs:
     num_generations: int = 4
     num_moves: int = 10
     total_steps: int = 10000
-    log_every: int = 5
+    print_every: int = 5
     save_every: int = 100
-    device: str   = "cuda"
-    engine_path: str = "stockfish/stockfish-ubuntu-x86-64-sse41-popcnt"
+    eval_engine_path: str = "stockfish/stockfish-ubuntu-x86-64-sse41-popcnt"
+    play_engine_path: str = "fairy-stockfish-largeboard_x86-64"
+    logs_dir_path: str = "../drive/MyDrive/A_Chess_Transformer/grpo_checkpoints/" # Little scuffed, but works for now
 
 # TODO: If time, clean up the init a little bit
 class GRPOTrainer:
@@ -36,12 +37,12 @@ class GRPOTrainer:
         self.total_steps = args.total_steps
         self.log_every = args.log_every
         self.save_every = args.save_every
-        self.device = args.device
         self._metrics = {"train": {}, "eval": {}}
         self.optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
         self.global_step = 0
         self.engine = chess.engine.SimpleEngine.popen_uci(args.engine_path)
-
+        self.play_engine = chess.engine.SimpleEngine.popen_uci(args.play_engine_path)
+        self.logs_dir_path = args.logs_dir_path
         self.ref_model.eval()  # set reference model to eval mode
 
     def step(self, batch):
@@ -56,7 +57,7 @@ class GRPOTrainer:
         self._metrics["train"].setdefault("loss", []).append(loss_val)
 
         self.global_step += 1
-        if self.global_step % self.log_every == 0:
+        if self.global_step % self.print_every == 0:
             print(f"step {self.global_step:>6} | loss {loss_val:8.4f}")
         
         if self.global_step % self.save_every == 0:
