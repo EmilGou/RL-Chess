@@ -45,8 +45,8 @@ class GRPOTrainer:
         self.ref_model.eval()  # set reference model to eval mode
 
     def step(self, batch):
-
-        loss = self._compute_loss(batch)   # (scalar tensor)
+        with torch.cuda.amp.autocast(dtype=torch.bfloat16):     # or torch.float16
+            loss = self._compute_loss(batch)
         loss.backward()
         self.optimizer.step()
         self.optimizer.zero_grad()
