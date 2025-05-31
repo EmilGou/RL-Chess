@@ -42,6 +42,14 @@ class GRPOTrainer:
         self.global_step = 0
         self.engine = chess.engine.SimpleEngine.popen_uci(args.engine_path)
         self.play_engine = chess.engine.SimpleEngine.popen_uci(args.play_engine_path)
+
+        ### manually hardcoded for now, but can be changed later
+
+        self.play_engine.configure({
+                        "Skill Level": -1,
+                        "Threads": 8,
+                        "Hash": 8000,})
+
         self.logs_dir_path = args.logs_dir_path
         self.ref_model.eval()  # set reference model to eval mode
 
@@ -204,7 +212,6 @@ class GRPOTrainer:
     def _generate_completions_and_score(
         self,
         prompt_ids,                  # (B, T)
-        engine_path,
         depth           = 10,        # for Stockfish analyse
         num_generations = 4,
         num_moves       = 10,
@@ -280,7 +287,8 @@ class GRPOTrainer:
                     continue
 
                 else:
-                    move = self.play_engine.play(b, chess.engine.Limit(depth=depth, time=.150)).move.uci()
+                    ### TODO: THIS IS HARD CODED TO LEVEL 3 SKILL LEVEL
+                    move = self.play_engine.play(b, chess.engine.Limit(depth=5, time=.150)).move.uci()
 
                 completions[i].append(UCI_MOVES[move])
                 completion_masks[i].append(0)           # never optimised
